@@ -1,269 +1,63 @@
 <!doctype html>
 <html lang="en" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0b1020" />
-    <title>Pi Payment Support</title>
-    <link rel="icon" href="./logo.jpg" type="image/jpeg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-    <script>
-      function waitForPi(callback) {
-        if (window.Pi && typeof window.Pi.init === 'function') {
-          callback();
-        } else {
-          setTimeout(function() { waitForPi(callback); }, 100);
-        }
-      }
-      
-      waitForPi(function() {
-        Pi.init({ version: "2.0", sandbox: false });
-        console.log('Pi SDK initialized successfully');
-      });
-    </script>
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        background: #0b1020;
-        color: #fff;
-        font-family: 'Cairo', sans-serif;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      header {
-        width: 100%;
-        background: rgba(11, 16, 32, 0.8);
-        backdrop-filter: blur(10px);
-        padding: 12px 25px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-sizing: border-box;
-        position: fixed;
-        top: 0;
-        z-index: 100;
-      }
-      .user-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .user-avatar {
-        width: 35px;
-        height: 35px;
-        background: #4f86ff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 800;
-        color: #0b1020;
-        font-size: 14px;
-      }
-      .user-text {
-        display: flex;
-        flex-direction: column;
-      }
-      .username {
-        font-size: 16px;
-        font-weight: 700;
-        color: #facc15;
-        line-height: 1.2;
-      }
-      .status {
-        font-size: 10px;
-        opacity: 0.5;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .pay-btn {
-        background: linear-gradient(135deg, #4f86ff 0%, #3b82f6 100%);
-        color: #fff;
-        border: none;
-        padding: 10px 24px;
-        font-size: 15px;
-        font-weight: 700;
-        border-radius: 50px;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .pay-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-      }
-      .pay-btn:active {
-        transform: translateY(0);
-      }
-      .main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 100px 20px 40px;
-        text-align: center;
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="user-info">
-        <div class="user-avatar" id="userAvatar">?</div>
-        <div class="user-text">
-          <div id="usernameDisplay" class="username">Guest</div>
-          <div id="statusDisplay" class="status">Connecting...</div>
-        </div>
-      </div>
-      <button id="payBtn" class="pay-btn">
-        <span>Support 1 Pi</span>
-      </button>
-    </header>
-    
-    <main class="main-content">
-    </main>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omega Marketplace</title>
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+  <style>
+    body { margin:0; background:#0b1020; color:#fff; font-family:sans-serif; text-align:center; padding-top:50px; }
+    button { background:#4f86ff; color:white; border:none; padding:18px 40px; font-size:18px; border-radius:50px; margin:20px; }
+    .status { margin:20px; font-size:16px; min-height:30px; }
+  </style>
+</head>
+<body>
+  <h1>Omega Marketplace</h1>
+  <p>Support the Developer</p>
+  <button id="payBtn">Support 1 Pi</button>
+  <div id="result" class="status"></div>
 
-    <script>
-      (function() {
-        // دالة مساعدة لإرسال طلبات POST
-        function postJson(url, body) {
-          return fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body || {}),
-          })
-          .then(function(r) {
-            return r.text().then(function(text) {
-              return { ok: r.ok, status: r.status, text: text };
-            });
-          });
-        }
+  <script>
+    let isReady = false;
 
-        // دالة تهيئة الدفع الرئيسية
-        function initPay() {
-          var userEl = document.getElementById('usernameDisplay');
-          var statusEl = document.getElementById('statusDisplay');
-          var btn = document.getElementById('payBtn');
+    function init() {
+      if (window.Pi) {
+        Pi.init({ version: "2.0", sandbox: true }).then(() => {
+          isReady = true;
+          document.getElementById("result").innerHTML = "✅ Connected";
+          setup();
+        });
+      } else {
+        setTimeout(init, 400);
+      }
+    }
 
-          // التحقق من جاهزية Pi SDK
-          if (!window.Pi || typeof window.Pi.authenticate !== 'function') {
-            statusEl.textContent = "Waiting for Pi SDK...";
-            setTimeout(initPay, 500);
-            return;
-          }
+    function setup() {
+      document.getElementById("payBtn").onclick = () => {
+        const res = document.getElementById("result");
+        res.textContent = "Creating payment...";
 
-          // بدء المصادقة
-          statusEl.textContent = "Authenticating...";
-          
-          window.Pi.authenticate(["username", "payments"], function(incomplete) {
-            console.log("Incomplete payment found", incomplete);
-          })
-          .then(function(auth) {
-            // تمت المصادقة بنجاح
-            var username = auth.user.username;
-            document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
-            userEl.textContent = username;
-            statusEl.textContent = "Ready";
-            console.log("User authenticated:", username);
+        Pi.createPayment({
+          amount: 1.0,
+          memo: "Support Omega Marketplace",
+          metadata: { type: "support" }
+        }, {
+          onReadyForServerApproval: (id) => {
+            res.textContent = "Approving...";
+            fetch("/.netlify/functions/pi-approve", { method:"POST", body:JSON.stringify({paymentId:id}) });
+          },
+          onReadyForServerCompletion: (id, txid) => {
+            res.textContent = "Completing...";
+            fetch("/.netlify/functions/pi-complete", { method:"POST", body:JSON.stringify({paymentId:id, txid}) })
+              .then(() => res.innerHTML = "✅ Payment Successful! Thank you");
+          },
+          onCancel: () => res.textContent = "Cancelled",
+          onError: (e) => res.textContent = "Error"
+        });
+      };
+    }
 
-            // تفعيل زر الدفع
-            btn.onclick = function() {
-              statusEl.textContent = "Creating payment...";
-              
-              var paymentData = {
-                amount: 1.0,
-                memo: "Support Developer",
-                metadata: { kind: "support" }
-              };
-
-              var callbacks = {
-                // المرحلة 9: الموافقة على الدفع
-                onReadyForServerApproval: function(paymentId) {
-                  console.log("Phase 9 - Approving payment:", paymentId);
-                  statusEl.textContent = "Approving...";
-                  
-                  postJson("/.netlify/functions/pi-approve", {
-                    paymentId: paymentId
-                  })
-                  .then(function(res) {
-                    if (res.ok) {
-                      statusEl.textContent = "Approved";
-                      console.log("Payment approved successfully");
-                    } else {
-                      statusEl.textContent = "Approve failed";
-                      console.error("Approval failed:", res.text);
-                    }
-                  })
-                  .catch(function(err) {
-                    statusEl.textContent = "Approve error";
-                    console.error("Approval error:", err);
-                  });
-                },
-                
-                // المرحلة 10: إتمام الدفع (هذه هي المشكلة)
-                onReadyForServerCompletion: function(paymentId, txid) {
-                  console.log("Phase 10 - Completing payment:", paymentId, txid);
-                  statusEl.textContent = "Completing...";
-                  
-                  postJson("/.netlify/functions/pi-complete", {
-                    paymentId: paymentId,
-                    txid: txid
-                  })
-                  .then(function(res) {
-                    console.log("Completion response:", res);
-                    if (res.ok) {
-                      statusEl.textContent = "Done! Thank you.";
-                      console.log("Payment completed successfully!");
-                    } else {
-                      statusEl.textContent = "Complete failed";
-                      console.error("Completion failed:", res.text);
-                    }
-                  })
-                  .catch(function(err) {
-                    statusEl.textContent = "Complete error";
-                    console.error("Completion error:", err);
-                  });
-                },
-                
-                // معالجة الإلغاء والأخطاء
-                onCancel: function() {
-                  statusEl.textContent = "Cancelled";
-                  console.log("Payment cancelled by user");
-                },
-                
-                onError: function(err) {
-                  statusEl.textContent = "Error: " + err.message;
-                  console.error("Payment error:", err);
-                }
-              };
-
-              // إنشاء الدفع
-              window.Pi.createPayment(paymentData, callbacks);
-            };
-          })
-          .catch(function(err) {
-            statusEl.textContent = "Auth failed: " + err.message;
-            console.error("Authentication failed:", err);
-          });
-        }
-        
-        // بدء التطبيق عند تحميل الصفحة
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", initPay);
-        } else {
-          initPay();
-        }
-      })();
-    </script>
-  </body>
+    window.onload = init;
+  </script>
+</body>
 </html>
