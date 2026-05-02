@@ -9,7 +9,7 @@ exports.handler = async (event) => {
       };
     }
 
-    const res = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
+    const res = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/cancel`, {
       method: "POST",
       headers: {
         "Authorization": `Key ${process.env.PI_API_KEY}`,
