@@ -6,9 +6,10 @@
   <title>Omega Marketplace</title>
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <style>
-    body { margin:0; background:#0b1020; color:#fff; font-family:sans-serif; text-align:center; padding-top:50px; }
-    button { background:#4f86ff; color:white; border:none; padding:18px 40px; font-size:18px; border-radius:50px; margin:20px; }
-    .status { margin:20px; font-size:16px; min-height:30px; }
+    body { margin:0; background:#0b1020; color:#fff; font-family:sans-serif; text-align:center; padding:50px 20px; }
+    h1 { color:#4f86ff; }
+    button { background:#4f86ff; color:white; border:none; padding:18px 40px; font-size:18px; border-radius:50px; margin:30px 0; width:80%; max-width:300px; }
+    .status { margin:25px 0; font-size:16px; min-height:30px; }
   </style>
 </head>
 <body>
@@ -20,44 +21,51 @@
   <script>
     let isReady = false;
 
-    function init() {
+    function initPi() {
       if (window.Pi) {
         Pi.init({ version: "2.0", sandbox: true }).then(() => {
           isReady = true;
           document.getElementById("result").innerHTML = "✅ Connected";
-          setup();
+          setupButton();
         });
       } else {
-        setTimeout(init, 400);
+        setTimeout(initPi, 400);
       }
     }
 
-    function setup() {
+    function setupButton() {
       document.getElementById("payBtn").onclick = () => {
-        const res = document.getElementById("result");
-        res.textContent = "Creating payment...";
+        const result = document.getElementById("result");
+        result.textContent = "Creating payment...";
 
         Pi.createPayment({
           amount: 1.0,
           memo: "Support Omega Marketplace",
           metadata: { type: "support" }
         }, {
-          onReadyForServerApproval: (id) => {
-            res.textContent = "Approving...";
-            fetch("/.netlify/functions/pi-approve", { method:"POST", body:JSON.stringify({paymentId:id}) });
+          onReadyForServerApproval: (paymentId) => {
+            result.textContent = "Approving...";
+            // استخدام الـ Path الكامل
+            fetch("/.netlify/functions/pi-approve", {
+              method: "POST",
+              body: JSON.stringify({ paymentId })
+            }).catch(() => result.textContent = "Approve failed");
           },
-          onReadyForServerCompletion: (id, txid) => {
-            res.textContent = "Completing...";
-            fetch("/.netlify/functions/pi-complete", { method:"POST", body:JSON.stringify({paymentId:id, txid}) })
-              .then(() => res.innerHTML = "✅ Payment Successful! Thank you");
+          onReadyForServerCompletion: (paymentId, txid) => {
+            result.textContent = "Completing...";
+            fetch("/.netlify/functions/pi-complete", {
+              method: "POST",
+              body: JSON.stringify({ paymentId, txid })
+            }).then(() => result.innerHTML = "✅ Payment Successful! Thank you")
+              .catch(() => result.textContent = "Complete failed");
           },
-          onCancel: () => res.textContent = "Cancelled",
-          onError: (e) => res.textContent = "Error"
+          onCancel: () => result.textContent = "Cancelled",
+          onError: (err) => result.textContent = "Error"
         });
       };
     }
 
-    window.onload = init;
+    window.onload = initPi;
   </script>
 </body>
 </html>
