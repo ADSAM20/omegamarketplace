@@ -20,100 +20,90 @@
   <div id="result" class="status">Connecting...</div>
 
   <script>
-    function postJson(url, body) {
-      return fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-    }
+  function postJson(url, body) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  }
 
-    function initPi() {
-      const result = document.getElementById("result");
-      
-      if (!window.Pi) {
-        result.textContent = "Pi SDK not found. Open in Pi Browser.";
-        return;
-      }
-      
-      // تهيئة Pi SDK
-      Pi.init({ version: "2.0", sandbox: true })  // غير إلى false للنشر النهائي
-        .then(function() {
-          result.textContent = "✅ Connected";
+  function initPi() {
+    const result = document.getElementById("result");
+    
+    if (!window.Pi) {
+      result.textContent = "❌ افتح التطبيق داخل Pi Browser";
+      return;
+    }
+    
+    // مهم: sandbox = false للإنتاج
+    Pi.init({ version: "2.0", sandbox: false })
+      .then(() => {
+        result.textContent = "✅ متصل";
+        
+        document.getElementById("payBtn").onclick = () => {
+          result.textContent = "جاري إنشاء الدفع...";
           
-          // تفعيل زر الدفع
-          document.getElementById("payBtn").onclick = function() {
-            result.textContent = "Creating payment...";
-            
-            Pi.createPayment({
-              amount: 1.0,
-              memo: "Support Omega Marketplace",
-              metadata: { type: "support" }
-            }, {
-              // المرحلة 9: الموافقة
-              onReadyForServerApproval: function(paymentId) {
-                result.textContent = "Approving payment...";
-                console.log("Approving:", paymentId);
-                
-                postJson("/.netlify/functions/pi-approve", { paymentId: paymentId })
-                  .then(function(res) {
-                    return res.json();
-                  })
-                  .then(function(data) {
-                    result.textContent = "Approved ✅";
-                    console.log("Approval response:", data);
-                  })
-                  .catch(function(err) {
-                    result.textContent = "❌ Approval failed";
-                    console.error("Approval error:", err);
-                  });
-              },
+          Pi.createPayment({
+            amount: 1.0,
+            memo: "Support Omega Marketplace",
+            metadata: { type: "support" }
+          }, {
+            onReadyForServerApproval: function(paymentId) {
+              result.textContent = "جاري الموافقة...";
               
-              // المرحلة 10: الإتمام
-              onReadyForServerCompletion: function(paymentId, txid) {
-                result.textContent = "Completing payment...";
-                console.log("Completing:", paymentId, txid);
-                
-                postJson("/.netlify/functions/pi-complete", { 
-                  paymentId: paymentId, 
-                  txid: txid 
+              postJson("/.netlify/functions/pi-approve", { paymentId })
+                .then(res => res.json())
+                .then(data => {
+                  result.textContent = "تمت الموافقة ✅";
                 })
-                  .then(function(res) {
-                    return res.json();
-                  })
-                  .then(function(data) {
-                    if (data.success) {
-                      result.innerHTML = "✅ Payment Successful! Thank you! 🎉";
-                      document.getElementById("payBtn").style.display = "none";
-                    } else {
-                      result.textContent = "❌ Completion failed";
-                    }
-                    console.log("Completion response:", data);
-                  })
-                  .catch(function(err) {
-                    result.textContent = "❌ Completion failed";
-                    console.error("Completion error:", err);
-                  });
-              },
-              
-              onCancel: function() {
-                result.textContent = "❌ Payment cancelled";
-              },
-              
-              onError: function(err) {
-                result.textContent = "❌ Error: " + err.message;
-                console.error("Payment error:", err);
-              }
-            });
-          };
-        })
-        .catch(function(err) {
-          result.textContent = "❌ Init failed: " + err.message;
-          console.error("Init error:", err);
-        });
-    }
+                .catch(err => {
+                  result.textContent = "❌ فشل الموافقة";
+                  console.error(err);
+                });
+            },
 
-    window.onload = initPi;
+            onReadyForServerCompletion: function(paymentId, txid) {
+              result.textContent = "جاري إتمام الدفع...";
+              
+              postJson("/.netlify/functions/pi-complete", { paymentId, txid })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.success) {
+                    result.innerHTML = "✅ تم الدفع بنجاح! شكراً لك 🎉";
+                    document.getElementById("payBtn").style.display = "none";
+                  } else {
+                    result.textContent = "❌ فشل إتمام الدفع";
+                  }
+                })
+                .catch(err => {
+                  result.textContent = "❌ فشل إتمام الدفع";
+                  console.error(err);
+                });
+            },
+
+            onCancel: () => result.textContent = "❌ تم إلغاء الدفع",
+            onError: (err) => {
+              result.textContent = "❌ خطأ: " + err.message;
+            }
+          });
+        };
+      })
+      .catch(err => {
+        result.textContent = "❌ فشل الاتصال: " + err.message;
+      });
+  }
+
+  // إضافة مهمة للمدفوعات غير المكتملة
+  function onIncompletePaymentFound(payment) {
+    console.log("Incomplete payment found:", payment);
+    // يمكنك إكمالها هنا إذا أردت
+  }
+
+  window.onload = () => {
+    Pi.init({ version: "2.0", sandbox: false }).then(() => {
+      Pi.addIncompletePaymentListener(onIncompletePaymentFound);
+      initPi();
+    });
+  };
   </script>
-</body>
-  </html>
