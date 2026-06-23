@@ -28,82 +28,87 @@
     });
   }
 
-  function initPi() {
+  async function initPi() {
     const result = document.getElementById("result");
     
     if (!window.Pi) {
-      result.textContent = "❌ افتح التطبيق داخل Pi Browser";
+      result.textContent = "❌ يرجى فتح التطبيق داخل Pi Browser";
       return;
     }
     
-    // مهم: sandbox = false للإنتاج
-    Pi.init({ version: "2.0", sandbox: false })
-      .then(() => {
-        result.textContent = "✅ متصل";
+    try {
+      await Pi.init({ version: "2.0", sandbox: false });
+      result.textContent = "✅ متصل بـ Pi Network";
+
+      // تفعيل زر الدفع
+      document.getElementById("payBtn").onclick = async () => {
+        result.textContent = "جاري إنشاء الدفع...";
         
-        document.getElementById("payBtn").onclick = () => {
-          result.textContent = "جاري إنشاء الدفع...";
-          
-          Pi.createPayment({
-            amount: 1.0,
-            memo: "Support Omega Marketplace",
-            metadata: { type: "support" }
-          }, {
-            onReadyForServerApproval: function(paymentId) {
-              result.textContent = "جاري الموافقة...";
-              
-              postJson("/.netlify/functions/pi-approve", { paymentId })
-                .then(res => res.json())
-                .then(data => {
-                  result.textContent = "تمت الموافقة ✅";
-                })
-                .catch(err => {
-                  result.textContent = "❌ فشل الموافقة";
-                  console.error(err);
-                });
-            },
+        Pi.createPayment({
+          amount: 1.0,
+          memo: "Support Omega Marketplace",
+          metadata: { type: "support" }
+        }, {
+          onReadyForServerApproval: function(paymentId) {
+            result.textContent = "جاري الموافقة...";
+            
+            postJson("/.netlify/functions/pi-approve", { paymentId })
+              .then(res => res.json())
+              .then(data => {
+                result.textContent = "✅ تمت الموافقة";
+              })
+              .catch(err => {
+                result.textContent = "❌ فشل الموافقة";
+                console.error(err);
+              });
+          },
 
-            onReadyForServerCompletion: function(paymentId, txid) {
-              result.textContent = "جاري إتمام الدفع...";
-              
-              postJson("/.netlify/functions/pi-complete", { paymentId, txid })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    result.innerHTML = "✅ تم الدفع بنجاح! شكراً لك 🎉";
-                    document.getElementById("payBtn").style.display = "none";
-                  } else {
-                    result.textContent = "❌ فشل إتمام الدفع";
-                  }
-                })
-                .catch(err => {
+          onReadyForServerCompletion: function(paymentId, txid) {
+            result.textContent = "جاري إتمام الدفع...";
+            
+            postJson("/.netlify/functions/pi-complete", { paymentId, txid })
+              .then(res => res.json())
+              .then(data => {
+                // تم تعديل الشرط ليتناسب مع pi-complete.js
+                if (data.status === "completed" || data.success !== false) {
+                  result.innerHTML = "✅ تم الدفع بنجاح! شكراً لك 🎉";
+                  document.getElementById("payBtn").style.display = "none";
+                } else {
                   result.textContent = "❌ فشل إتمام الدفع";
-                  console.error(err);
-                });
-            },
+                }
+              })
+              .catch(err => {
+                result.textContent = "❌ فشل إتمام الدفع";
+                console.error(err);
+              });
+          },
 
-            onCancel: () => result.textContent = "❌ تم إلغاء الدفع",
-            onError: (err) => {
-              result.textContent = "❌ خطأ: " + err.message;
-            }
-          });
-        };
-      })
-      .catch(err => {
-        result.textContent = "❌ فشل الاتصال: " + err.message;
-      });
+          onCancel: () => result.textContent = "❌ تم إلغاء الدفع",
+          onError: (err) => {
+            result.textContent = "❌ خطأ: " + (err.message || err);
+          }
+        });
+      };
+
+    } catch (err) {
+      result.textContent = "❌ فشل الاتصال: " + err.message;
+    }
   }
 
-  // إضافة مهمة للمدفوعات غير المكتملة
+  // الاستماع للمدفوعات غير المكتملة
   function onIncompletePaymentFound(payment) {
     console.log("Incomplete payment found:", payment);
-    // يمكنك إكمالها هنا إذا أردت
   }
 
+  // بدء التشغيل
   window.onload = () => {
-    Pi.init({ version: "2.0", sandbox: false }).then(() => {
-      Pi.addIncompletePaymentListener(onIncompletePaymentFound);
-      initPi();
-    });
+    Pi.init({ version: "2.0", sandbox: false })
+      .then(() => {
+        Pi.addIncompletePaymentListener(onIncompletePaymentFound);
+        initPi();
+      })
+      .catch(err => {
+        console.error("Init error:", err);
+      });
   };
   </script>
