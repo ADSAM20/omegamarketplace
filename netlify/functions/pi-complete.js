@@ -26,7 +26,7 @@ exports.handler = async function(event, context) {
 
     return {
       statusCode: response.ok ? 200 : response.status,
-      body: JSON.stringify(data)
+      body: JSON.stringify({ success: response.ok, data }) // التوافق مع الواجهة
     };
   } catch (error) {
     console.error("Error:", error);
