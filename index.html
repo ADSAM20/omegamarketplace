@@ -22,7 +22,8 @@
   <div id="result" class="status">Connecting...</div>
 
   <!-- الكود البرمجي المعدل -->
-                <script>
+       <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script>
   function postJson(url, body) {
     return fetch(url, {
       method: "POST",
@@ -31,26 +32,18 @@
     });
   }
 
-  function onIncompletePaymentFound(payment) {
-    console.log("Incomplete payment found:", payment);
-  }
-
   window.onload = async () => {
     const result = document.getElementById("result");
-    result.textContent = "جاري الاتصال بـ Pi SDK...";
+    result.textContent = "جاري الاتصال...";
 
     if (!window.Pi) {
-      result.textContent = "❌ افتح داخل Pi Browser فقط";
+      result.textContent = "❌ افتح داخل Pi Browser";
       return;
     }
 
     try {
-      // تهيئة الـ SDK
       await Pi.init({ version: "2.0", sandbox: false });
-      result.textContent = "✅ متصل - اضغط الزر";
-
-      // مستمع المدفوعات المعلقة
-      Pi.addIncompletePaymentListener(onIncompletePaymentFound);
+      result.textContent = "✅ متصل - جرب الزر الآن";
 
       // زر الدفع
       document.getElementById("payBtn").onclick = async () => {
@@ -71,7 +64,7 @@
             },
 
             onReadyForServerCompletion: (paymentId, txid) => {
-              result.textContent = "جاري الإتمام...";
+              result.textContent = "جاري إتمام الدفع...";
               postJson("/.netlify/functions/pi-complete", { paymentId, txid })
                 .then(r => r.json())
                 .then(() => {
@@ -85,13 +78,13 @@
             onError: (err) => result.textContent = "❌ خطأ: " + (err.message || err)
           });
         } catch (e) {
-          result.textContent = "❌ خطأ في createPayment: " + e.message;
+          result.textContent = "❌ خطأ في إنشاء الدفع: " + e.message;
         }
       };
 
     } catch (err) {
       result.textContent = "❌ فشل تهيئة Pi SDK: " + err.message;
-      console.error(err);
     }
   };
-  </script>
+  </script>         
+          
